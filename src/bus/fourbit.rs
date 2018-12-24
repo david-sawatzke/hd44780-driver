@@ -4,6 +4,7 @@ use embedded_hal::digital::OutputPin;
 use bus::DataBus;
 
 pub struct FourBitBus<
+    'a,
     RS: OutputPin,
     EN: OutputPin,
     D4: OutputPin,
@@ -11,25 +12,32 @@ pub struct FourBitBus<
     D6: OutputPin,
     D7: OutputPin,
 > {
-    rs: RS,
-    en: EN,
-    d4: D4,
-    d5: D5,
-    d6: D6,
-    d7: D7,
+    rs: &'a mut RS,
+    en: &'a mut EN,
+    d4: &'a mut D4,
+    d5: &'a mut D5,
+    d6: &'a mut D6,
+    d7: &'a mut D7,
 }
 
-impl<RS: OutputPin, EN: OutputPin, D4: OutputPin, D5: OutputPin, D6: OutputPin, D7: OutputPin>
-    FourBitBus<RS, EN, D4, D5, D6, D7>
+impl<
+        'a,
+        RS: OutputPin,
+        EN: OutputPin,
+        D4: OutputPin,
+        D5: OutputPin,
+        D6: OutputPin,
+        D7: OutputPin,
+    > FourBitBus<'a, RS, EN, D4, D5, D6, D7>
 {
     pub fn from_pins(
-        rs: RS,
-        en: EN,
-        d4: D4,
-        d5: D5,
-        d6: D6,
-        d7: D7,
-    ) -> FourBitBus<RS, EN, D4, D5, D6, D7> {
+        rs: &'a mut RS,
+        en: &'a mut EN,
+        d4: &'a mut D4,
+        d5: &'a mut D5,
+        d6: &'a mut D6,
+        d7: &'a mut D7,
+    ) -> FourBitBus<'a, RS, EN, D4, D5, D6, D7> {
         FourBitBus {
             rs,
             en,
@@ -104,7 +112,7 @@ impl<RS: OutputPin, EN: OutputPin, D4: OutputPin, D5: OutputPin, D6: OutputPin, 
 }
 
 impl<RS: OutputPin, EN: OutputPin, D4: OutputPin, D5: OutputPin, D6: OutputPin, D7: OutputPin>
-    DataBus for FourBitBus<RS, EN, D4, D5, D6, D7>
+    DataBus for FourBitBus<'_, RS, EN, D4, D5, D6, D7>
 {
     fn write<D: DelayUs<u16> + DelayMs<u8>>(&mut self, byte: u8, data: bool, delay: &mut D) {
         if data {

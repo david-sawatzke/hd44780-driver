@@ -8,7 +8,7 @@ use embedded_hal::digital::OutputPin;
 
 pub mod bus;
 
-use bus::{DataBus, EightBitBus, FourBitBus};
+use bus::{DataBus, FourBitBus};
 
 pub mod entry_mode;
 
@@ -48,57 +48,7 @@ pub enum CursorBlink {
 }
 
 impl<
-        D: DelayUs<u16> + DelayMs<u8>,
-        RS: OutputPin,
-        EN: OutputPin,
-        D0: OutputPin,
-        D1: OutputPin,
-        D2: OutputPin,
-        D3: OutputPin,
-        D4: OutputPin,
-        D5: OutputPin,
-        D6: OutputPin,
-        D7: OutputPin,
-    > HD44780<D, EightBitBus<RS, EN, D0, D1, D2, D3, D4, D5, D6, D7>>
-{
-    /// Create an instance of a `HD44780` from 8 data pins, a register select
-    /// pin, an enable pin and a struct implementing the delay trait.
-    /// - The delay instance is used to sleep between commands to
-    /// ensure the `HD44780` has enough time to process commands.
-    /// - The eight db0..db7 pins are used to send and recieve with
-    ///  the `HD44780`.
-    /// - The register select pin is used to tell the `HD44780`
-    /// if incoming data is a command or data.
-    /// - The enable pin is used to tell the `HD44780` that there
-    /// is data on the 8 data pins and that it should read them in.
-    ///
-    pub fn new_8bit(
-        rs: RS,
-        en: EN,
-        d0: D0,
-        d1: D1,
-        d2: D2,
-        d3: D3,
-        d4: D4,
-        d5: D5,
-        d6: D6,
-        d7: D7,
-        delay: D,
-    ) -> HD44780<D, EightBitBus<RS, EN, D0, D1, D2, D3, D4, D5, D6, D7>> {
-        let mut hd = HD44780 {
-            bus: EightBitBus::from_pins(rs, en, d0, d1, d2, d3, d4, d5, d6, d7),
-            delay,
-            entry_mode: EntryMode::default(),
-            display_mode: DisplayMode::default(),
-        };
-
-        hd.init_8bit();
-
-        return hd;
-    }
-}
-
-impl<
+        'a,
         D: DelayUs<u16> + DelayMs<u8>,
         RS: OutputPin,
         EN: OutputPin,
@@ -106,7 +56,7 @@ impl<
         D5: OutputPin,
         D6: OutputPin,
         D7: OutputPin,
-    > HD44780<D, FourBitBus<RS, EN, D4, D5, D6, D7>>
+    > HD44780<D, FourBitBus<'a, RS, EN, D4, D5, D6, D7>>
 {
     /// Create an instance of a `HD44780` from 4 data pins, a register select
     /// pin, an enable pin and a struct implementing the delay trait.
@@ -128,14 +78,14 @@ impl<
     /// being sent over the data bus
     ///
     pub fn new_4bit(
-        rs: RS,
-        en: EN,
-        d4: D4,
-        d5: D5,
-        d6: D6,
-        d7: D7,
+        rs: &'a mut RS,
+        en: &'a mut EN,
+        d4: &'a mut D4,
+        d5: &'a mut D5,
+        d6: &'a mut D6,
+        d7: &'a mut D7,
         delay: D,
-    ) -> HD44780<D, FourBitBus<RS, EN, D4, D5, D6, D7>> {
+    ) -> HD44780<D, FourBitBus<'a, RS, EN, D4, D5, D6, D7>> {
         let mut hd = HD44780 {
             bus: FourBitBus::from_pins(rs, en, d4, d5, d6, d7),
             delay,
@@ -209,7 +159,7 @@ where
     }
 
     /// Set if the characters on the display should be visible
-    pub fn set_display(&mut self,  display: Display) {
+    pub fn set_display(&mut self, display: Display) {
         self.display_mode.display = display;
 
         let cmd = self.display_mode.as_byte();
@@ -356,48 +306,6 @@ where
         self.delay.delay_us(100);
 
         self.bus.write(0x80, false, &mut self.delay);
-
-        // Wait for the command to be processed
-        self.delay.delay_us(100);
-    }
-
-    // Follow the 8-bit setup procedure as specified in the HD44780 datasheet
-    fn init_8bit(&mut self) {
-        // Wait for the LCD to wakeup if it was off
-        self.delay.delay_ms(15u8);
-
-        // Initialize Lcd in 8-bit mode
-        self.bus.write(0b0011_0000, false, &mut self.delay);
-
-        // Wait for the command to be processed
-        self.delay.delay_ms(5u8);
-
-        // Sets 8-bit operation and enables 5x7 mode for chars
-        self.bus.write(0b0011_1000, false, &mut self.delay);
-
-        // Wait for the command to be processed
-        self.delay.delay_us(100);
-
-        self.bus.write(0b0000_1110, false, &mut self.delay);
-
-        // Wait for the command to be processed
-        self.delay.delay_us(100);
-
-        // Clear Display
-        self.bus.write(0b0000_0001, false, &mut self.delay);
-
-        // Wait for the command to be processed
-        self.delay.delay_us(100);
-
-        // Move the cursor to beginning of first line
-        self.bus.write(0b000_0111, false, &mut self.delay);
-
-        // Wait for the command to be processed
-        self.delay.delay_us(100);
-
-        // Set entry mode
-        self.bus
-            .write(self.entry_mode.as_byte(), false, &mut self.delay);
 
         // Wait for the command to be processed
         self.delay.delay_us(100);
